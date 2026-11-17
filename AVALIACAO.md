@@ -31,7 +31,7 @@ Versões: Quarkus 3.15.7 · Java 21
    Como usamos IA e o que validamos manualmente: Registro detalhado em [docs/ia/registro-uso-ia.md](docs/ia/registro-uso-ia.md) e resumo no [README.md](README.md#uso-crítico-de-ia). Documenta 8 achados concretos em que a primeira saída da IA falhou ou gerou código incompatível com Quarkus 3.15.7 (como `@Schema(examples=...)`, `quarkus.http.test-port=0`, `BuiltinMismatchedInputExceptionMapper`, `TimeoutConfigImpl` por método, `QuarkusTransaction.requiringNew().run(...)` e janela do disjuntor), como foram detectados via compilação, leitura de logs, `javap` e testes, e as regras adotadas pelo grupo.
 
 9. **Execução — nível auto-atribuído: 3**
-   Como rodar: Instruções reproduzíveis sem Docker no [README.md](README.md#como-rodar-sem-docker) subindo `catalogo-service` na porta `8081` e `backlog-service` na porta `8080`, roteiro de demonstração passo a passo com `curl` e script automatizado [scripts/demo-quarkus.sh](scripts/demo-quarkus.sh) validado contra os dois serviços em execução.
+   Como rodar: Instruções reproduzíveis sem Docker no [README.md](README.md#como-rodar-sem-docker) subindo `catalogo-service` na porta `8081` e `backlog-service` na porta `8080`, roteiro de demonstração passo a passo com `curl`, script automatizado [scripts/demo-quarkus.sh](scripts/demo-quarkus.sh) e coleção Postman completa em [docs/postman/LetterGames-Quarkus.postman_collection.json](docs/postman/LetterGames-Quarkus.postman_collection.json) ([roteiro](docs/postman/ROTEIRO-POSTMAN.md)).
 
 ## Opcionais entregues
 

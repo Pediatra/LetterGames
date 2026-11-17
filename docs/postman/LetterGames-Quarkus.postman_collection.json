@@ -1,0 +1,1431 @@
+{
+  "info": {
+    "_postman_id": "a7f2c901-8d43-4e21-9b1e-11a7c4590001",
+    "name": "LetterGames Quarkus (PE-JV-001)",
+    "description": "Coleção completa para testar todos os endpoints do catalogo-service (:8081) e backlog-service (:8080), cobrindo fluxos principais, segurança RBAC + posse, validação, erros padronizados, observabilidade e tolerância a falhas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "catalogoUrl", "value": "http://localhost:8081" },
+    { "key": "backlogUrl", "value": "http://localhost:8080" },
+    { "key": "novoJogoId", "value": "" },
+    { "key": "itemBacklogId", "value": "" },
+    { "key": "itemParaRemoverId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Observabilidade e OpenAPI",
+      "item": [
+        {
+          "name": "Catalogo - Health Live",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/q/health/live",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["q", "health", "live"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Health Ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e banco H2 UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/q/health/ready",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["q", "health", "ready"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Health Live",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/q/health/live",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "health", "live"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Health Ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e banco H2 UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/q/health/ready",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "health", "ready"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - OpenAPI JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OpenAPI 200 com /jogos', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.paths).to.have.property('/jogos');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{catalogoUrl}}/q/openapi",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["q", "openapi"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - OpenAPI JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OpenAPI 200 com rotas do backlog', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.paths).to.have.property('/usuarios/{usuarioId}/backlog');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{backlogUrl}}/q/openapi",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "openapi"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catalogo Service (:8081)",
+      "item": [
+        {
+          "name": "Catalogo - Erro 401 Sem Credenciais",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 401 NAO_AUTENTICADO', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(401);",
+                  "    pm.expect(json.codigo).to.eql('NAO_AUTENTICADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Erro 403 JOGADOR tentando criar jogo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 403 ACESSO_NEGADO', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.codigo).to.eql('ACESSO_NEGADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Tentativa Jogador\",\n  \"plataforma\": \"PC\",\n  \"genero\": \"Indie\",\n  \"duracaoMediaHoras\": 8\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Criar Jogo (ADMIN -> 201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 com Location e ID salvo', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.header('Location');",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.collectionVariables.set('novoJogoId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Sea of Stars Postman\",\n  \"plataforma\": \"PC\",\n  \"genero\": \"RPG\",\n  \"duracaoMediaHoras\": 30\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Erro 400 Validacao de Entrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 400 ERRO_VALIDACAO com detalhes', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.codigo).to.eql('ERRO_VALIDACAO');",
+                  "    pm.expect(json.detalhes.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \" \",\n  \"plataforma\": \"PC\",\n  \"genero\": \"RPG\",\n  \"duracaoMediaHoras\": -5\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Erro 409 Jogo Duplicado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 409 JOGO_DUPLICADO', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('JOGO_DUPLICADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"hollow knight\",\n  \"plataforma\": \"pc\",\n  \"genero\": \"Metroidvania\",\n  \"duracaoMediaHoras\": 27\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Erro 422 Duracao Acima do Limite",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 422 DURACAO_ACIMA_DO_LIMITE', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('DURACAO_ACIMA_DO_LIMITE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Campanha Gigante\",\n  \"plataforma\": \"PC\",\n  \"genero\": \"MMO\",\n  \"duracaoMediaHoras\": 600\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Listar Jogos com Filtros",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e filtro por plataforma/genero/termo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const list = pm.response.json();",
+                  "    pm.expect(list.length).to.eql(1);",
+                  "    pm.expect(list[0].titulo).to.eql('The Witcher 3');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos?plataforma=PC&genero=RPG&termo=witcher",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"],
+              "query": [
+                { "key": "plataforma", "value": "PC" },
+                { "key": "genero", "value": "RPG" },
+                { "key": "termo", "value": "witcher" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Buscar Jogo por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 para jogo criado', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().titulo).to.eql('Sea of Stars Postman');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos/{{novoJogoId}}",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos", "{{novoJogoId}}"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Erro 404 Jogo Inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 404 JOGO_NAO_ENCONTRADO', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('JOGO_NAO_ENCONTRADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos/999999",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Atualizar Jogo (ADMIN -> 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 com campos atualizados', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.plataforma).to.eql('Switch');",
+                  "    pm.expect(json.duracaoMediaHoras).to.eql(34);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Sea of Stars: Throes of the Watchmaker\",\n  \"plataforma\": \"Switch\",\n  \"genero\": \"RPG\",\n  \"duracaoMediaHoras\": 34\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos/{{novoJogoId}}",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos", "{{novoJogoId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Backlog Service (:8080)",
+      "item": [
+        {
+          "name": "Backlog - Erro 401 Sem Credenciais",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 401 NAO_AUTENTICADO', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('NAO_AUTENTICADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Adicionar Jogo Criado (201 + REST Client)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201, Location e snapshot gravado', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.header('Location');",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('QUERO_JOGAR');",
+                  "    pm.collectionVariables.set('itemBacklogId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": {{novoJogoId}}\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Adicionar Jogo 3 para Limpeza Posterior (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 para Celeste (jogoId=3)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.titulo).to.eql('Celeste');",
+                  "    pm.collectionVariables.set('itemParaRemoverId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 409 Jogo Ja No Backlog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 409 JOGO_JA_NO_BACKLOG', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('JOGO_JA_NO_BACKLOG');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 422 Jogo Inexistente no Catalogo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 422 JOGO_INEXISTENTE', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('JOGO_INEXISTENTE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 400 Validacao (jogoId negativo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 400 ERRO_VALIDACAO', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ERRO_VALIDACAO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": -1\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 422 Transicao Invalida (QUERO_JOGAR -> ZERADO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 422 TRANSICAO_INVALIDA', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('TRANSICAO_INVALIDA');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ZERADO\"\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Alterar Status para JOGANDO (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e status JOGANDO', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('JOGANDO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"JOGANDO\"\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Alterar Status para ZERADO (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 e status ZERADO', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('ZERADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ZERADO\"\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Listar Itens por Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 filtrando ZERADO', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const list = pm.response.json();",
+                  "    pm.expect(list.some(i => i.id === Number(pm.collectionVariables.get('itemBacklogId')))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog?status=ZERADO",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"],
+              "query": [{ "key": "status", "value": "ZERADO" }]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Buscar Item por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 para itemBacklogId', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('itemBacklogId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 404 Item Inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 404 ITEM_NAO_ENCONTRADO', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ITEM_NAO_ENCONTRADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/999999",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Buscar Detalhes Enriquecidos (Catalogo Vivo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 com catalogoDisponivel=true e plataforma Switch', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.catalogoDisponivel).to.be.true;",
+                  "    pm.expect(json.plataforma).to.eql('Switch');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}/detalhes",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}", "detalhes"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Resumo do Jogador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 com horasPendentes e horasZeradas', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.usuarioId).to.eql('joao');",
+                  "    pm.expect(json.total).to.be.at.least(2);",
+                  "    pm.expect(json.horasZeradas).to.be.at.least(34);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/resumo",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "resumo"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 403 Regra de Posse (joao lendo backlog de maria)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 403 ACESSO_NEGADO por posse', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ACESSO_NEGADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/maria/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "maria", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Erro 403 JOGADOR acessando rota ADMIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 403 ACESSO_NEGADO para JOGADOR', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ACESSO_NEGADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/admin/backlogs/estatisticas",
+              "host": ["{{backlogUrl}}"],
+              "path": ["admin", "backlogs", "estatisticas"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Estatisticas Globais (ADMIN -> 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 para ADMIN', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.totalItens).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/admin/backlogs/estatisticas",
+              "host": ["{{backlogUrl}}"],
+              "path": ["admin", "backlogs", "estatisticas"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Remover Item Criado 1 (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Remover Item Criado 2 (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemParaRemoverId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemParaRemoverId}}"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Remover Jogo Criado (Limpeza -> 204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos/{{novoJogoId}}",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos", "{{novoJogoId}}"]
+            }
+          }
+        },
+        {
+          "name": "Catalogo - Metricas Prometheus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Metricas do catalogo presentes', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_catalogo_jogos_criados_total');",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_catalogo_consultas_jogo_total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/q/metrics",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["q", "metrics"]
+            }
+          }
+        },
+        {
+          "name": "Backlog - Metricas Prometheus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Metricas do backlog presentes', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_backlog_itens_adicionados_total');",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_backlog_jogos_zerados_total');",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_backlog_catalogo_falhas_total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/q/metrics",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Manual - Derrubar catalogo-service (Fault Tolerance)",
+      "description": "Execute estes requests manualmente após parar o processo do catalogo-service (:8081) e ter pelo menos 1 item salvo no backlog de joao (ex.: jogoId=1).",
+      "item": [
+        {
+          "name": "[Manual] Setup com Catalogo Ligado - Adicionar Hollow Knight (jogoId=1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Item criado para testar degradacao', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('itemBacklogId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "[Manual] Catalogo Desligado - POST retorna 503 CATALOGO_INDISPONIVEL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Fallback de escrita recusa com 503 CATALOGO_INDISPONIVEL', function () {",
+                  "    pm.response.to.have.status(503);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('CATALOGO_INDISPONIVEL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "[Manual] Catalogo Desligado - GET /detalhes degrada com 200 e snapshot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Fallback de leitura devolve 200 degradado com snapshot local', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.catalogoDisponivel).to.be.false;",
+                  "    pm.expect(json.aviso).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}/detalhes",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}", "detalhes"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
