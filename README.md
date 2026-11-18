@@ -133,7 +133,8 @@ Com os dois serviços em pé, execute o script completo ou importe a coleção n
 ./scripts/demo-quarkus.sh
 ```
 
-- **Coleção Postman v2.1 (pronta para importação e Collection Runner):** [docs/postman/LetterGames-Quarkus.postman_collection.json](docs/postman/LetterGames-Quarkus.postman_collection.json)
+- **Coleção enxuta para a Banca (12 requests):** [docs/postman/LetterGames-Banca-Demo.postman_collection.json](docs/postman/LetterGames-Banca-Demo.postman_collection.json)
+- **Coleção Postman completa (todos os endpoints):** [docs/postman/LetterGames-Quarkus.postman_collection.json](docs/postman/LetterGames-Quarkus.postman_collection.json)
 - **Roteiro textual com payloads e scripts:** [docs/postman/ROTEIRO-POSTMAN.md](docs/postman/ROTEIRO-POSTMAN.md)
 
 Ou rode os passos manualmente:

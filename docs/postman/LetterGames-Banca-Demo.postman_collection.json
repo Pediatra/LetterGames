@@ -1,0 +1,438 @@
+{
+  "info": {
+    "_postman_id": "b8c3d012-9e54-4f32-8c2f-22b8d5600002",
+    "name": "LetterGames Quarkus — Demo Banca (12 Requests)",
+    "description": "Roteiro enxuto (12 requests) para apresentação na banca do PE-JV-001, cobrindo fluxo principal, RBAC + regra de posse, erros padronizados, Panache, health/metrics e tolerância a falhas na queda do catalogo-service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "catalogoUrl", "value": "http://localhost:8081" },
+    { "key": "backlogUrl", "value": "http://localhost:8080" },
+    { "key": "novoJogoId", "value": "11" },
+    { "key": "itemBacklogId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "1. Demo na Banca — Serviços Ligados (10 requests)",
+      "item": [
+        {
+          "name": "01. [Critério 6] Health Ready do Backlog (:8080)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Backlog UP com banco H2 pronto', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/q/health/ready",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "health", "ready"]
+            }
+          }
+        },
+        {
+          "name": "02. [Critério 5] Sem credencial -> 401 NAO_AUTENTICADO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 401 com ErroPadrao', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('NAO_AUTENTICADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "03. [Critério 5] JOGADOR tentando criar no Catálogo -> 403 ACESSO_NEGADO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 403 ACESSO_NEGADO para JOGADOR', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ACESSO_NEGADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Bloqueado\",\n  \"plataforma\": \"PC\",\n  \"genero\": \"Indie\",\n  \"duracaoMediaHoras\": 8\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "04. [Critérios 1 e 3] ADMIN cria jogo no Catálogo -> 201 + Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Criado com 201 e Location', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.header('Location');",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('novoJogoId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "admin", "type": "string" },
+                { "key": "password", "value": "admin123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Sea of Stars Banca {{$timestamp}}\",\n  \"plataforma\": \"PC\",\n  \"genero\": \"RPG\",\n  \"duracaoMediaHoras\": 30\n}"
+            },
+            "url": {
+              "raw": "{{catalogoUrl}}/jogos",
+              "host": ["{{catalogoUrl}}"],
+              "path": ["jogos"]
+            }
+          }
+        },
+        {
+          "name": "05. [Critérios 1 e 2] joao adiciona jogo ao Backlog (REST Client) -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Adicionado com 201 via REST Client', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.header('Location');",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('QUERO_JOGAR');",
+                  "    pm.collectionVariables.set('itemBacklogId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": {{novoJogoId}}\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "06. [Critério 4] Transição inválida QUERO_JOGAR -> ZERADO -> 422 ErroPadrao",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retorna 422 TRANSICAO_INVALIDA no corpo ErroPadrao', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('TRANSICAO_INVALIDA');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ZERADO\"\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "07. [Critério 1] Evoluir status para JOGANDO -> 200 OK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status atualizado para JOGANDO', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('JOGANDO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"JOGANDO\"\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}"]
+            }
+          }
+        },
+        {
+          "name": "08. [Critério 3] Resumo do Backlog (Agregação Panache) -> 200 OK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Resumo calculado com horasPendentes', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.usuarioId).to.eql('joao');",
+                  "    pm.expect(json.horasPendentes).to.be.at.least(30);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/resumo",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "resumo"]
+            }
+          }
+        },
+        {
+          "name": "09. [Critério 5 Nível 3] Regra de Posse: joao lendo maria -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bloqueia acesso ao backlog de outro jogador', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('ACESSO_NEGADO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/maria/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "maria", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "10. [Critério 6] Métricas de Negócio Prometheus -> 200 OK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Métricas próprias expostas', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include('lettergames_backlog_itens_adicionados_total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/q/metrics",
+              "host": ["{{backlogUrl}}"],
+              "path": ["q", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Demo na Banca — Derrubar catalogo-service (2 requests)",
+      "description": "Pare o catalogo-service (:8081) com Ctrl+C e dispare estes dois requests para provar Timeout + Retry + CircuitBreaker + Fallback.",
+      "item": [
+        {
+          "name": "11. [Critério 2 - Queda] Escrita bloqueada pelo Fallback -> 503",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Recusa escrita sem catálogo com 503 CATALOGO_INDISPONIVEL', function () {",
+                  "    pm.response.to.have.status(503);",
+                  "    pm.expect(pm.response.json().codigo).to.eql('CATALOGO_INDISPONIVEL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jogoId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog"]
+            }
+          }
+        },
+        {
+          "name": "12. [Critério 2 - Queda] Detalhes degradados com Snapshot -> 200 OK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Degrada com 200 OK e snapshot local', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.catalogoDisponivel).to.be.false;",
+                  "    pm.expect(json.aviso).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "joao", "type": "string" },
+                { "key": "password", "value": "joao123", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{backlogUrl}}/usuarios/joao/backlog/{{itemBacklogId}}/detalhes",
+              "host": ["{{backlogUrl}}"],
+              "path": ["usuarios", "joao", "backlog", "{{itemBacklogId}}", "detalhes"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
